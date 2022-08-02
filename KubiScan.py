@@ -18,21 +18,24 @@ def get_color_by_priority(priority):
     return color
 
 def filter_objects_less_than_days(days, objects):
-    filtered_objects= []
     current_datetime = datetime.datetime.now()
-    for object in objects:
-        if object.time:
-            if (current_datetime.date() - object.time.date()).days < days:
-                filtered_objects.append(object)
+    filtered_objects = [
+        object
+        for object in objects
+        if object.time
+        and (current_datetime.date() - object.time.date()).days < days
+    ]
 
     objects = filtered_objects
     return objects
 
 def filter_objects_by_priority(priority, objects):
-    filtered_objects= []
-    for object in objects:
-        if object.priority.name == priority.upper():
-            filtered_objects.append(object)
+    filtered_objects = [
+        object
+        for object in objects
+        if object.priority.name == priority.upper()
+    ]
+
     objects = filtered_objects
     return objects
 
@@ -98,14 +101,37 @@ def generic_print(header, objects, show_rules=False):
             if o.time is None:
                 t.add_row([get_color_by_priority(o.priority) + o.priority.name + WHITE, o.kind, o.namespace, o.name, 'No creation time', get_pretty_rules(o.rules)])
             else:
-                t.add_row([get_color_by_priority(o.priority) + o.priority.name + WHITE, o.kind, o.namespace, o.name, o.time.ctime() + " (" + str(get_delta_days_from_now(o.time)) + " days)", get_pretty_rules(o.rules)])
+                t.add_row(
+                    [
+                        get_color_by_priority(o.priority)
+                        + o.priority.name
+                        + WHITE,
+                        o.kind,
+                        o.namespace,
+                        o.name,
+                        f"{o.time.ctime()} ({str(get_delta_days_from_now(o.time))} days)",
+                        get_pretty_rules(o.rules),
+                    ]
+                )
+
     else:
         t = PrettyTable(['Priority', 'Kind', 'Namespace', 'Name', 'Creation Time'])
         for o in objects:
             if o.time is None:
                 t.add_row([get_color_by_priority(o.priority) + o.priority.name + WHITE, o.kind, o.namespace, o.name, 'No creation time'])
             else:
-                t.add_row([get_color_by_priority(o.priority) + o.priority.name + WHITE, o.kind, o.namespace, o.name, o.time.ctime() + " (" + str(get_delta_days_from_now(o.time)) + " days)"])
+                t.add_row(
+                    [
+                        get_color_by_priority(o.priority)
+                        + o.priority.name
+                        + WHITE,
+                        o.kind,
+                        o.namespace,
+                        o.name,
+                        f"{o.time.ctime()} ({str(get_delta_days_from_now(o.time))} days)",
+                    ]
+                )
+
 
     print_table_aligned_left(t)
 
@@ -184,7 +210,7 @@ def print_associated_rolebindings_and_clusterrolebindings_to_subject(subject_nam
 def desrialize_token(token):
     desirialized_token = ''
     for key in token.keys():
-        desirialized_token += key + ': ' + token[key]
+        desirialized_token += f'{key}: {token[key]}'
         desirialized_token += '\n'
     return desirialized_token
 
@@ -215,7 +241,7 @@ def print_subjects_by_kind(kind):
         t.add_row([subject.kind, subject.namespace, subject.name])
 
     print_table_aligned_left(t)
-    print('Total number: %s' % len(subjects))
+    print(f'Total number: {len(subjects)}')
 
 def get_pretty_rules(rules):
     pretty = ''
@@ -223,7 +249,7 @@ def get_pretty_rules(rules):
         for rule in rules:
             verbs_string = '('
             for verb in rule.verbs:
-                verbs_string += verb + ','
+                verbs_string += f'{verb},'
             verbs_string = verbs_string[:-1]
             verbs_string += ')->'
 
@@ -232,7 +258,7 @@ def get_pretty_rules(rules):
                 resources_string += 'None'
             else:
                 for resource in rule.resources:
-                    resources_string += resource + ','
+                    resources_string += f'{resource},'
 
                 resources_string = resources_string[:-1]
             resources_string += ')\n'
@@ -272,9 +298,9 @@ def print_pods_with_access_secret_via_volumes(namespace=None):
     t = PrettyTable(['Pod Name', 'Namespace', 'Container Name', 'Volume Mounted Secrets'])
     for pod in pods.items:
         for container in pod.spec.containers:
-            mount_info = ''
-            secrets_num = 1
             if container.volume_mounts is not None:
+                mount_info = ''
+                secrets_num = 1
                 for volume_mount in container.volume_mounts:
                     for volume in pod.spec.volumes:
                         if volume.secret is not None and volume.name == volume_mount.name:
@@ -294,9 +320,9 @@ def print_pods_with_access_secret_via_environment(namespace=None):
     t = PrettyTable(['Pod Name', 'Namespace', 'Container Name', 'Environment Mounted Secrets'])
     for pod in pods.items:
         for container in pod.spec.containers:
-            mount_info = ''
-            secrets_num = 1
             if container.env is not None:
+                mount_info = ''
+                secrets_num = 1
                 for env in container.env:
                     if env.value_from is not None and env.value_from.secret_key_ref is not None:
                         mount_info += '{2}. Environemnt variable name: {0}\n   Secret name: {1}\n'.format(env.name, env.value_from.secret_key_ref.name, secrets_num)
@@ -324,16 +350,15 @@ def parse_container_spec(container_spec):
     dict =  container_spec.to_dict()
     is_ports_header_set = False
     for key in dict.keys():
-        if dict[key] is not None:
-            if key == 'ports':
-                if not is_ports_header_set:
-                    spec += "Ports:\n"
-                    is_ports_header_set = True
-                for port_obj in dict[key]:
-                    if 'host_port' in port_obj:
-                        spec += '  {0}: {1}\n'.format('container_port', port_obj['container_port'])
-                        spec += '  {0}: {1}\n'.format('host_port', port_obj['host_port'])
-                        break
+        if dict[key] is not None and key == 'ports':
+            if not is_ports_header_set:
+                spec += "Ports:\n"
+                is_ports_header_set = True
+            for port_obj in dict[key]:
+                if 'host_port' in port_obj:
+                    spec += '  {0}: {1}\n'.format('container_port', port_obj['container_port'])
+                    spec += '  {0}: {1}\n'.format('host_port', port_obj['host_port'])
+                    break
     spec += parse_security_context(container_spec.security_context)
     return spec
 
@@ -343,23 +368,22 @@ def parse_pod_spec(pod_spec, container):
     is_volumes_header_set = False
     for key in dict.keys():
         if dict[key] is not None:
-            if key == 'host_pid' or key == 'host_ipc' or key == 'host_network':
+            if key in ['host_pid', 'host_ipc', 'host_network']:
                 spec += '{0}: {1}\n'.format(key, dict[key])
 
             if key == 'volumes' and container.volume_mounts is not None:
                 for volume_obj in dict[key]:
-                    if 'host_path' in volume_obj:
-                        if volume_obj['host_path']:
-                            for volume_mount in container.volume_mounts:
-                                if volume_obj['name'] == volume_mount.name:
-                                    if not is_volumes_header_set:
-                                        spec += "Volumes:\n"
-                                        is_volumes_header_set = True
-                                    spec += '  -{0}: {1}\n'.format('name', volume_obj['name'])
-                                    spec += '   host_path:\n'
-                                    spec += '     {0}: {1}\n'.format('path', volume_obj['host_path']['path'])
-                                    spec += '     {0}: {1}\n'.format('type', volume_obj['host_path']['type'])
-                                    spec += '     {0}: {1}\n'.format('container_path', volume_mount.mount_path)
+                    if 'host_path' in volume_obj and volume_obj['host_path']:
+                        for volume_mount in container.volume_mounts:
+                            if volume_obj['name'] == volume_mount.name:
+                                if not is_volumes_header_set:
+                                    spec += "Volumes:\n"
+                                    is_volumes_header_set = True
+                                spec += '  -{0}: {1}\n'.format('name', volume_obj['name'])
+                                spec += '   host_path:\n'
+                                spec += '     {0}: {1}\n'.format('path', volume_obj['host_path']['path'])
+                                spec += '     {0}: {1}\n'.format('type', volume_obj['host_path']['type'])
+                                spec += '     {0}: {1}\n'.format('container_path', volume_mount.mount_path)
 
     spec += parse_security_context(pod_spec.security_context)
     return spec
@@ -387,18 +411,23 @@ def print_join_token():
         ca_cert = '/etc/kubernetes/ca.crt'
 
     if running_in_docker_container():
-        ca_cert = '/tmp' + ca_cert
+        ca_cert = f'/tmp{ca_cert}'
 
-    join_token_path = os.path.dirname(os.path.realpath(__file__)) + '/engine/join_token.sh'
-    tokens = engine.utils.list_boostrap_tokens_decoded()
+    join_token_path = (
+        f'{os.path.dirname(os.path.realpath(__file__))}/engine/join_token.sh'
+    )
 
-    if not tokens:
-        print("No bootstrap tokens exist")
-    else:
+    if tokens := engine.utils.list_boostrap_tokens_decoded():
         for token in tokens:
-            command = 'sh ' + join_token_path + ' ' + ' '.join([master_ip, master_port, ca_cert, token])
+            command = f'sh {join_token_path} ' + ' '.join(
+                [master_ip, master_port, ca_cert, token]
+            )
+
             print('\nExecute: %s' % command)
             os.system(command)
+
+    else:
+        print("No bootstrap tokens exist")
 
 def print_logo():
     logo = '''
@@ -433,7 +462,7 @@ osss:.::`...`- ..`.:/`+ssss+`/:``.. -`...`::.:ssso
 
 def print_examples():
     import os
-    with open(os.path.dirname(os.path.realpath(__file__)) + '/examples/examples.txt', 'r') as f:
+    with open(f'{os.path.dirname(os.path.realpath(__file__))}/examples/examples.txt', 'r') as f:
         print(f.read())
 
 def main():

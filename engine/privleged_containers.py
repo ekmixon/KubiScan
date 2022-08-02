@@ -2,11 +2,11 @@ import engine.capabilities.capabilities as caps
 from api import api_client
 
 def list_pods_for_all_namespaces_or_one_namspace(namespace=None):
-    if namespace is None:
-        pods = api_client.CoreV1Api.list_pod_for_all_namespaces(watch=False)
-    else:
-        pods = api_client.CoreV1Api.list_namespaced_pod(namespace)
-    return pods
+    return (
+        api_client.CoreV1Api.list_pod_for_all_namespaces(watch=False)
+        if namespace is None
+        else api_client.CoreV1Api.list_namespaced_pod(namespace)
+    )
 
 def list_pods(namespace=None):
     return list_pods_for_all_namespaces_or_one_namspace(namespace)
@@ -48,17 +48,19 @@ def get_privileged_containers(namespace=None):
                             privileged_containers.append(container)
                             found_privileged_container = True
                             break
-                if not found_privileged_container:
-                    if pod.spec.volumes is not None:
-                      for volume in pod.spec.volumes:
-                          if found_privileged_container:
-                              break
-                          if volume.host_path:
-                              for volume_mount in container.volume_mounts:
-                                   if volume_mount.name == volume.name:
-                                       privileged_containers.append(container)
-                                       found_privileged_container = True
-                                       break
+                if (
+                    not found_privileged_container
+                    and pod.spec.volumes is not None
+                ):
+                    for volume in pod.spec.volumes:
+                        if found_privileged_container:
+                            break
+                        if volume.host_path:
+                            for volume_mount in container.volume_mounts:
+                                 if volume_mount.name == volume.name:
+                                     privileged_containers.append(container)
+                                     found_privileged_container = True
+                                     break
         if privileged_containers:
             pod.spec.containers = privileged_containers
             privileged_pods.append(pod)

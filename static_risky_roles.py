@@ -20,7 +20,7 @@ def set_risky_roles_from_yaml(items):
                                            namespace=RISKY_NAMESPACE)
                                       )
 
-with open(os.path.dirname(os.path.realpath(__file__)) + '/risky_roles.yaml', 'r') as stream:
+with open(f'{os.path.dirname(os.path.realpath(__file__))}/risky_roles.yaml', 'r') as stream:
     try:
         loaded_yaml = yaml.safe_load(stream)
         set_risky_roles_from_yaml(loaded_yaml['items'])

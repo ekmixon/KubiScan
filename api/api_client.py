@@ -71,11 +71,11 @@ def api_init(kube_config_file=None, host=None, token_filename=None, cert_filenam
         configuration = Configuration()
         api_client = ApiClient()
         if running_in_docker_container():
-            # TODO: Consider using config.load_incluster_config() from container created by Kubernetes. Required service account with privileged permissions.
-            # Must have mounted volume
-            container_volume_prefix = '/tmp'
             kube_config_bak_path = '/KubiScan/config_bak'
             if not os.path.isfile(kube_config_bak_path):
+                # TODO: Consider using config.load_incluster_config() from container created by Kubernetes. Required service account with privileged permissions.
+                # Must have mounted volume
+                container_volume_prefix = '/tmp'
                 copyfile(container_volume_prefix + os.path.expandvars('$CONF_PATH'), kube_config_bak_path)
                 replace(kube_config_bak_path, ': /', ': /tmp/')
 
@@ -103,7 +103,7 @@ class BearerTokenLoader(object):
         self._set_config()
 
     def _load_config(self):
-        self._host = "https://" + self._host
+        self._host = f"https://{self._host}"
 
         if not os.path.isfile(self._token_filename):
             raise Exception("Service token file does not exists.")
@@ -129,5 +129,5 @@ class BearerTokenLoader(object):
         configuration.host = self._host
         configuration.ssl_ca_cert = self.ssl_ca_cert
         configuration.verify_ssl = self._verify_ssl
-        configuration.api_key['authorization'] = "bearer " + self.token
+        configuration.api_key['authorization'] = f"bearer {self.token}"
         client.Configuration.set_default(configuration)
